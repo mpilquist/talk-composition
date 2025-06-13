@@ -1,0 +1,13 @@
+[.columns]
+= Compositional Programming
+:source-highlighter: highlight.js
+:highlightjs-theme: css/solarized-dark.css
+:highlightjs-languages: scala
+:revealjs_theme: moon
+:revealjs_hash: true
+:customcss: css/presentation.css
+:icons: font
+:revealjs_width: 1200
+:docinfo: private
+
+

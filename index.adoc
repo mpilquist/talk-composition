@@ -1,8 +1,8 @@
 [.columns]
 = Compositional Programming
-:source-highlighter: highlight.js
+:source-highlighter: highlightjs
 :highlightjs-theme: css/solarized-dark.css
-:highlightjs-languages: scala
+:highlightjsdir: highlight
 :revealjs_theme: moon
 :revealjs_hash: true
 :customcss: css/presentation.css
@@ -10,38 +10,7 @@
 :revealjs_width: 1200
 :docinfo: private
 
-[%notitle]
-== Abstract Nonsense
-image::images/books.jpg[FP Books]
-
-== Outline (Delete Me)
-
-- Intro
-  - What is composition?
-  - Why is it important?
-  - "Pure" functional programming & referential transparency
-- Tour of techniques
-  - Data modeling & immutability via ip4s
-  - Error handling via Try
-  - Combinators via scodec
-  - Invention (courage to create) via skunk lru cache
-  - Typeclasses via monoids
-
- 
-Parking lot:
-- 7+-2
-- Thinking fast and slow
-- Inventing on principle
-- Constraints liberate
-- Courage to create
-- skunk and lru cache
-- ip4s and immutability
-- persistent data structures and ADTs
-- modeling computation failures
-- scodec & combinators
-- type classes
-
-== Complexity
+== Part 1: Complexity
 
 [%notitle]
 === Complexity
@@ -74,11 +43,297 @@ Parking lot:
 -- Blaise Pascal, Letter 16. 1657
 
 [%notitle]
-=== Modularity
+=== Composition
+image::images/synth.jpg[Modular Synthesizer]
 
-Modular Decomposition
+[%notitle]
+=== Composition
+image::images/breadboard.jpg[8-bit Breadboard Computer]
+
+[%notitle]
+=== Functional Programming
+
+In this talk:
+
+* What is functional programming?
+* What is referential transparency?
+* What are some useful techniques that promote composition?
+* 80/20 rule
+
+== Part 2: Techniques
+
+== Error Handling
+
+[source,scala]
+----
+def mean(xs: List[Double]): Double =
+  if xs.isEmpty then
+    throw new ArithmeticException("mean of empty list!")
+  else xs.sum / xs.length
+
+def variance(xs: List[Double]): Double =
+  val m = mean(xs)
+  mean(xs.map(x => math.pow(x - m, 2)))
+----
+
+[%step]
+[source,scala]
+----
+> mean(List(1.0, 2.0, 3.0, 4.0, 5.0))
+val res0: Double = 3.0
+
+> mean(List(1.0, 2.0, 3.0, 4.0, 5.0))
+val res1: Double = 2.0
+----
+
+=== Error Handling
+
+[source,scala]
+----
+def mean(xs: List[Double]): Double =
+  if xs.isEmpty then
+    throw new ArithmeticException("mean of empty list!")
+  else xs.sum / xs.length
+----
+
+[source,scala]
+----
+> mean(List())
+java.lang.ArithmeticException: mean of an empty list!
+  at rs$line$9$.mean(rs$line$9:2)
+  ... 32 elided
+----
+
+* `mean` is a partial function -- only defined for part of its domain. 
+* We prefer total functions as they compose better
+
+=== Error Handling
+
+[source,scala]
+----
+enum Option[+A]:
+  case Some(get: A)
+  case None
+----
+
+=== Error Handling
+
+[source,scala]
+----
+enum Option[+A]:
+  case Some(get: A)
+  case None
+
+def mean(xs: List[Double]): Option[Double] =                  <1>
+  if xs.isEmpty then None
+  else Some(xs.sum / xs.length)
+----
+<1> `mean` is now a total function
+
+=== Error Handling
+
+[source,scala]
+----
+def variance(xs: List[Double]): Double =
+  val m = mean(xs)
+  mean(xs.map(x => math.pow(x - m, 2)))
+----
+
+[%step]
+[source,scala]
+----
+-- [E134] Type Error: ----------------------------------------------------------
+3 |  mean(xs.map(x => math.pow(x - m, 2)))
+  |                            ^^^
+  |None of the overloaded alternatives of method - in class Double with types
+  | (x: Double): Double
+  | (x: Float): Double
+  | (x: Long): Double
+  | (x: Int): Double
+  | (x: Char): Double
+  | (x: Short): Double
+  | (x: Byte): Double
+  |match arguments ((m : Option[Double]))
+1 error found
+----
 
 
+=== Error Handling
+
+[source,scala]
+----
+def variance(xs: List[Double]): Option[Double] =
+  mean(xs) match
+    case Some(m) =>
+      mean(xs.map(x => math.pow(x - m, 2)))
+    case None => None
+----
+
+=== Error Handling
+
+[source,scala]
+----
+enum Option[+A]:
+  case Some(get: A)
+  case None
+
+  def map[B](f: A => B): Option[B] =
+    this match
+      case None => None
+      case Some(a) => Some(f(a))
+----
+
+=== Error Handling
+
+[source,scala]
+----
+def variance(xs: List[Double]): Option[Double] =
+  mean(xs).map: m =>
+    mean(xs.map(x => math.pow(x - m, 2)))
+----
+
+[%step]
+[source,scala]
+----
+-- [E007] Type Mismatch Error: -------------------------------------------------
+3 |    mean(xs.map(x => math.pow(x - m, 2)))
+  |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |    Found:    Option[Double]
+  |    Required: Double
+  |
+  | longer explanation available when compiling with `-explain`
+1 error found
+----
+
+=== Error Handling
+
+[source,scala]
+----
+enum Option[+A]:
+  case Some(get: A)
+  case None
+
+  def map[B](f: A => B): Option[B] =
+    this match
+      case None => None
+      case Some(a) => Some(f(a))
+
+  def flatMap[B](f: A => Option[B]): Option[B] =
+    this match
+      case None => None
+      case Some(a) => f(a)
+----
+
+=== Error Handling
+
+[source,scala]
+----
+def variance(xs: List[Double]): Option[Double] =
+  mean(xs).flatMap: m =>
+    mean(xs.map(x => math.pow(x - m, 2)))
+----
 
 == Data Modeling
 
+* Data oriented design
+* Prefer data over state
+* Data is immutable and forever
+* Data can be stored, printed, compared
+* Make illegal states unrepresentable
+
+=== Data Modeling
+
+[source,scala]
+----
+trait Host
+trait IpAddress
+case class Ipv4Address(b0: Byte, ..., b3: Byte) extends IpAddress
+case class Ipv6Address(b0: Byte, ..., b15: Byte) extends IpAddress
+case class Hostname(...) extends Host
+case class IDN(...) extends Host
+----
+
+image::images/host-hierarchy.jpg[Host Graph,height=400]
+
+=== Data Modeling
+
+[source,scala]
+----
+val h1 = IpAddress.fromString("127.0.0.1")
+// val h1: Option[IpAddress] = Some(127.0.0.1)
+
+val h2 = IpAddress.fromString("::1")
+// val h2: Option[IpAddress] = Some(::1)
+
+val h3 = Host.fromString("localhost")
+// val h3: Option[Host] = Some(localhost)
+
+val port = Port.fromInt("8080")
+// val port: Option[Port] = Some(8080)
+----
+
+=== Data Modeling
+
+[source,scala]
+----
+val m = MacAddress.fromString("00:11:22:33:44:55")
+// val m: Option[MaxAddress] = Some(00:11:22:33:44:55)
+
+val m2 = MacAddress.fromBytes(Array[Byte](0, 17, 34, 51, 68, 85))
+// val m2: Option[com.comcast.ip4s.MacAddress] = Some(00:11:22:33:44:55)
+
+val m3 = MacAddress.fromBytes(0, 17, 34, 51, 68, 85)
+// val m3: com.comcast.ip4s.MacAddress = 00:11:22:33:44:55
+----
+
+[source,scala]
+----
+object MacAddress:
+  def fromBytes(bytes: Array[Byte]): Option[MacAddress] =
+    if bytes.length == 6 then Some(new MacAddress(bytes))
+    else None
+
+  def fromBytes(b0: Byte, ..., b5: Byte): MacAddress =
+    val bytes = new Array[Byte](6)
+    bytes(0) = b0
+    ...
+    bytes(5) = b5
+    new MacAddress(bytes)
+----
+
+=== Data Modeling
+
+[source,scala]
+----
+
+----
+
+== Persistent data structures
+
+LRU cache in Skunk
+
+
+== Combinators
+
+scodec
+
+== Typeclasses
+
+Monoids & Monads
+
+== Part 3: Retrospective
+
+- 7+-2
+- Thinking fast and slow
+- Inventing on principle
+- Constraints liberate
+- Courage to create
+- Adoption issues
+- Time from intro to first monad tutorial
+- Survivorship bias
+- Weird budgets
+- LLMs and relegation to craftmanship
+
+[%notitle]
+== Abstract Nonsense
+image::images/books.jpg[FP Books]

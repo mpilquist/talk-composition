@@ -737,7 +737,6 @@ val res1: String = "HelloWorld"
 val res2: List[Int] = List(1, 2, 3, 4, 5, 6)
 ----
 
-[transition=slide-out none]
 === Typeclasses
 
 [source,scala]
@@ -753,7 +752,6 @@ given [A: Semigroup] => Monoid[Option[A]]:
   def empty = None
 ----
 
-[transition=slide-in none]
 === Typeclasses
 
 [source,scala,highlight=7]

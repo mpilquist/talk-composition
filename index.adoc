@@ -50,15 +50,14 @@ image::images/synth.jpg[Modular Synthesizer]
 === Composition
 image::images/breadboard.jpg[8-bit Breadboard Computer]
 
-[%notitle]
-=== Functional Programming
+=== Agenda
 
-In this talk:
-
-* What is functional programming?
-* What is referential transparency?
-* What are some useful techniques that promote composition?
-* 80/20 rule
+* Techniques from Functional Programming
+** Error Handling
+** Data Modeling
+** Persistent Data Structures
+** Combinators
+** Typeclasses
 
 == Part 2: Techniques
 
@@ -104,7 +103,7 @@ java.lang.ArithmeticException: mean of an empty list!
   ... 32 elided
 ----
 
-* `mean` is a partial function -- only defined for part of its domain. 
+* `mean` is a partial function -- only defined for part of its domain 
 * We prefer total functions as they compose better
 
 === Error Handling
@@ -308,7 +307,7 @@ LRU cache in Skunk
 
 == Combinators
 
-image::images/scodec-github.jpg[Scodec Github]
+image::images/scodec-intro.png[Scodec Github Readme,height=500]
 
 === Combinators
 
@@ -397,6 +396,25 @@ trait Codec[A] extends Decoder[A] & Encoder[A]:
 
 [source,scala]
 ----
+import scodec.codecs.int8
+
+val triple = int8 :: int8 :: int8
+// val triple: Codec[(Int, Int, Int)] = 8-bit signed integer :: 8-bit signed integer :: 8-bit signed integer
+
+val enc = triple.encode(1, 2, 3)
+// val enc: Attempt[BitVector] = Successful(BitVector(24 bits, 0x010203))
+
+val reversed = enc.require.bytes.reverse.bits
+// val reversed: BitVector = BitVector(24 bits, 0x030201)
+
+val dec = triple.decode(reversed)
+// val dec: Attempt[DecodeResult[(Int, Int, Int)]] = Successful(DecodeResult((3,2,1),BitVector(empty)))
+----
+
+=== Combinators
+
+[source,scala]
+----
 object Codec:
 
   extension [A, B <: Tuple](codecA: Codec[A])
@@ -416,9 +434,14 @@ object Codec:
 
 [source,scala]
 ----
-val triple = int32 :: int32 :: int32
+val x = int8.encode(500)
+// val x: Attempt[BitVector] = Failure(500 is greater than maximum value 127 for 8-bit signed integer)
 
-val enc = triple.encode(1, 2, 3)
+val labeled = ("size" | int8)
+// val labeled: Codec[Int] = size(8-bit signed integer)
+
+val y = labeled.encode(500)
+// val y: Attempt[BitVector] = Failure(size: 500 is greater than maximum value 127 for 8-bit signed integer)
 ----
 
 === Combinators
@@ -447,9 +470,9 @@ case class Ipv6Header(
 [source,scala]
 ----
 val ipv6: Codec[Ipv6Address] =
-  bytes(16).xmapc(b =>
-    Ipv6Address.fromBytes(b.toArray).get
-  )(a => ByteVector.view(a.toBytes))
+  bytes(16).xmap(
+    b => Ipv6Address.fromBytes(b.toArray).get,
+    a => ByteVector.view(a.toBytes))
 
 given Codec[Ipv6Header] = {
   ("version"      | constant(bin"0110")) ::

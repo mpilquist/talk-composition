@@ -617,21 +617,39 @@ scala> val charOccurs = bag("scala".toList)
 val charOccurs: Map[Char, Int] = Map(s -> 1, c -> 1, a -> 2, l -> 1)
 ----
 
-
-
 == Part 3: Retrospective
 
-- 7+-2
-- Thinking fast and slow
-- Inventing on principle
-- Constraints liberate
-- Courage to create
-- Adoption issues
-- Time from intro to first monad tutorial
-- Survivorship bias
-- Weird budgets
-- LLMs and relegation to craftmanship
-
 [%notitle]
-== Abstract Nonsense
+=== Retrospective
+
+* FP has a steep learning curve
+* FP has not been widely adopted
+* Is FP relevant in the era of LLMs?
+* Should FP be relegated to software craftmanship? 
+
+[.columns]
+=== Learning Curve
+
+[.column]
+* "There's no royal road to geometry." - Euclid
+* Thinking Fast and Slow by Daniel Kahneman
+* Prototype to Monad Tutorial / Monad Survivorship Bias
+* Avoid abstract nonsense
+
+[.column]
 image::images/books.jpg[FP Books]
+
+=== Adoption
+
+* Major languages and frameworks have gotten progressively more functional
+* Weird budgets
+* Avoid dogmatism
+* 
+
+=== Advice
+
+* Courage to create
+* 80/20 rule
+* Manage weird budget
+
+

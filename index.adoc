@@ -301,13 +301,6 @@ object MacAddress:
     new MacAddress(bytes)
 ----
 
-=== Data Modeling
-
-[source,scala]
-----
-
-----
-
 == Persistent data structures
 
 LRU cache in Skunk
@@ -315,7 +308,160 @@ LRU cache in Skunk
 
 == Combinators
 
-scodec
+image::images/scodec-github.jpg[Scodec Github]
+
+=== Combinators
+
+[source,scala]
+----
+case class DecodeResult[+A](value: A, remainer: BitVector)
+
+trait Decoder[+A]:
+  def decode(bv: BitVector): Attempt[DecodeResult]
+
+trait Encoder[-A]:
+  def encode(a: A): Attempt[BitVector]
+
+trait Codec[A] extends Encoder[A] & Decoder[A]
+----
+
+=== Combinators
+
+[source,scala]
+----
+case class DecodeResult[+A](value: A, remainer: BitVector):
+  def map[B](f: A => B): DecodeResult[B] =
+    DecodeResult(f(value), remainder)
+----
+
+=== Combinators
+
+[source,scala]
+----
+case class DecodeResult[+A](value: A, remainer: BitVector):
+  def map[B](f: A => B): DecodeResult[B] =
+    DecodeResult(f(value), remainder)
+
+trait Decoder[+A]:
+  self =>
+
+  def decode(bv: BitVector): Attempt[DecodeResult]
+
+  def map[B](f: A => B): Decoder[B] = new Decoder[B]:
+    def decode(bv: BitVector): Attempt[DecodeResult] =
+      self.decode(bv).map(_.map(f))
+----
+
+=== Combinators
+
+[source,scala]
+----
+trait Encoder[-A]:
+  self =>
+
+  def encode(a: A): Attempt[BitVector]
+
+  def map[B](f: A => B): Encoder[B] = new Encoder[B]:
+    def encode(b: B): Attempt[BitVector] =
+      ??? // Have a value of b: B and f: A => B
+----
+
+=== Combinators
+
+[source,scala]
+----
+trait Encoder[-A]:
+  self =>
+
+  def encode(a: A): Attempt[BitVector]
+
+  def contramap[B](f: B => A): Encoder[B] = new Encoder[B]:
+    def encode(b: B): Attempt[BitVector] =
+      self.encode(f(b))
+----
+
+
+=== Combinators
+
+[source,scala]
+----
+trait Codec[A] extends Decoder[A] & Encoder[A]:
+  self =>
+
+  def exmap[B](f: A => B, g: B => A): Codec[B] = new Codec[B]:
+    def decode(bv: BitVector) = self.decode(bv).map(_.map(f))
+    def encode(b: B) = self.encode(g(b))
+----
+
+=== Combinators
+
+[source,scala]
+----
+object Codec:
+
+  extension [A, B <: Tuple](codecA: Codec[A])
+    def ::(codecB: Codec[B]): Codec[A *: B] =
+      new Codec[A *: B]:
+        def encode(ab: A *: B) = encodeBoth(codecA, codecB)(ab.head, ab.tail)
+        def decode(bv: BitVector) = decodeBoth(codecA, codecB)(bv).map(_.map(_ *: _))
+
+  extension [A, B](a: Codec[A])
+    def ::(b: Codec[B])(using DummyImplicit): Codec[(A, B)] =
+      new Codec[(A, B)]:
+        def encode(ab: (A, B)) = encodeBoth(a, b)(ab(0), ab(1))
+        def decode(bv: BitVector) = decodeBoth(a, b)(bv)
+----
+
+=== Combinators
+
+[source,scala]
+----
+val triple = int32 :: int32 :: int32
+
+val enc = triple.encode(1, 2, 3)
+----
+
+=== Combinators
+
+:figure-caption!:
+image::images/ipv6-header.jpg[IPv6 Header,title="https://en.wikipedia.org/wiki/IPv6_packet#Fixed_header"]
+
+[.columns]
+=== Combinators
+
+[.column]
+[source,scala]
+----
+case class Ipv6Header(
+  trafficClass: Int,
+  flowLabel: Int,
+  payloadLength: Int,
+  protocol: Int,
+  hopLimit: Int,
+  sourceIp: Ipv6Address,
+  destinationIp: Ipv6Address
+)
+----
+
+[.column.is-three-fifths]
+[source,scala]
+----
+val ipv6: Codec[Ipv6Address] =
+  bytes(16).xmapc(b =>
+    Ipv6Address.fromBytes(b.toArray).get
+  )(a => ByteVector.view(a.toBytes))
+
+given Codec[Ipv6Header] = {
+  ("version"      | constant(bin"0110")) ::
+  ("traffic_class"| uint8              ) ::
+  ("flow_label"   | uint(20)           ) ::
+  ("payload_len"  | uint16             ) ::
+  ("next_header"  | uint8              ) ::
+  ("hop_limit"    | uint8              ) ::
+  ("source_ip"    | ipv6               ) ::
+  ("dest_ip"      | ipv6               )
+}.as[Ipv6Header]
+----
 
 == Typeclasses
 

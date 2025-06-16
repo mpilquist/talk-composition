@@ -400,7 +400,6 @@ trait Cache[K, V]:
 trait Cache[K, V]:
 
   /** Returns a cache with the supplied mapping and the evicted entry. */
-
   def put(k: K, v: V): (Cache[K, V], Option[(K, V)])
 ----
 

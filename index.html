@@ -585,7 +585,6 @@ trait Cache[K, V]:
 trait Cache[K, V]:
 
   /** Returns a cache with the supplied mapping and the evicted entry. */
-
   def put(k: K, v: V): (Cache[K, V], Option[(K, V)])</code></pre></div></div></div></section><section id="_persistent_data_structures_5"><h2>Persistent data structures</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-scala hljs" data-noescape="true" data-lang="scala">/** Maps keys to value and stores up to a maximum number of entries.
   * When inserting a new mapping in to a full cache, the least recently
   * accessed/updated mapping is removed.

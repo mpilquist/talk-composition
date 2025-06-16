@@ -245,7 +245,7 @@ def variance(xs: List[Double]): Option[Double] =
 [source,scala]
 ----
 trait Host
-trait IpAddress
+trait IpAddress extends Host
 case class Ipv4Address(b0: Byte, ..., b3: Byte) extends IpAddress
 case class Ipv6Address(b0: Byte, ..., b15: Byte) extends IpAddress
 case class Hostname(...) extends Host
@@ -276,13 +276,13 @@ val port = Port.fromInt("8080")
 [source,scala]
 ----
 val m = MacAddress.fromString("00:11:22:33:44:55")
-// val m: Option[MaxAddress] = Some(00:11:22:33:44:55)
+// val m: Option[MacAddress] = Some(00:11:22:33:44:55)
 
 val m2 = MacAddress.fromBytes(Array[Byte](0, 17, 34, 51, 68, 85))
-// val m2: Option[com.comcast.ip4s.MacAddress] = Some(00:11:22:33:44:55)
+// val m2: Option[MacAddress] = Some(00:11:22:33:44:55)
 
 val m3 = MacAddress.fromBytes(0, 17, 34, 51, 68, 85)
-// val m3: com.comcast.ip4s.MacAddress = 00:11:22:33:44:55
+// val m3: MacAddress = 00:11:22:33:44:55
 ----
 
 [source,scala]
@@ -299,6 +299,63 @@ object MacAddress:
     bytes(5) = b5
     new MacAddress(bytes)
 ----
+
+=== Data Modeling
+
+[source,scala]
+----
+abstract class GenSocketAddress
+
+final case class SocketAddress[+A <: Host](host: A, port: Port) extends GenSocketAddress:
+  override def toString: String =
+    host match
+      case _: Ipv6Address => s"[$host]:$port"
+      case _              => s"$host:$port"
+
+final case class UnixSocketAddress(path: String) extends GenSocketAddress:
+  override def toString: String = path
+----
+
+[source,scala]
+----
+case class ConnectionSettings(
+  address: SocketAddress[Ipv4Address],
+  ...
+)
+----
+
+=== Data Modeling
+
+[source,scala]
+----
+package fs2.io.net
+
+sealed trait Network[F[_]]:
+
+  /** Opens a stream socket and connects it to the supplied address.
+    *
+    * TCP is used when the supplied address contains an IP address or hostname. Unix sockets are also
+    * supported (when the supplied address contains a unix socket address).
+    *
+    * @param address              address to connect to
+    * @param options              socket options to apply to the socket
+    */
+  def connect(address: GenSocketAddress, options: List[SocketOption] = Nil): Resource[F, Socket[F]]
+
+  /** Opens and binds a stream server socket to the supplied address.
+    *
+    * TCP is used when the supplied address contains an IP address or hostname. Unix sockets are also
+    * supported (when the supplied address contains a unix socket address).
+    *
+    * @param address              address to bind to
+    * @param options              socket options to apply to each accepted socket
+    */
+  def bind(
+      address: GenSocketAddress = SocketAddress.Wildcard,
+      options: List[SocketOption] = Nil
+  ): Resource[F, ServerSocket[F]]
+----
+
 
 == Persistent data structures
 
@@ -429,6 +486,7 @@ class Cache[K, V] private (
       val evicted = entries.get(k).filter(_ != v).map(k -> _)
       (newCache, evicted)
 ----
+
 == Combinators
 
 image::images/scodec-intro.png[Scodec Github Readme,height=500]
@@ -786,17 +844,19 @@ val charOccurs: Map[Char, Int] = Map(s -> 1, c -> 1, a -> 2, l -> 1)
 [.column]
 image::images/books.jpg[FP Books]
 
-=== Adoption
+[.columns]
+=== Outlook and Advice
 
+[.column]
 * Major languages and frameworks have gotten progressively more functional
-* Weird budgets
-* Avoid dogmatism
-* 
+* Libraries & tooling are extremely mature
+* Focus on composition
+* Be principled
 
-=== Advice
-
-* Courage to create
-* 80/20 rule
+[.column]
+* Have courage to create and experiment
+* Remember 80/20 rule
 * Manage weird budget
+* Avoid dogmatism
 
 

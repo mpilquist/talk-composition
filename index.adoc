@@ -1,8 +1,8 @@
-[.columns]
 = Compositional Programming
-:source-highlighter: highlightjs
+:source-highlighter: highlight.js
 :highlightjs-theme: css/solarized-dark.css
-:highlightjsdir: highlight
+:highlightjs-languages: scala
+:highlightjsdir: https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0
 :revealjs_theme: moon
 :revealjs_hash: true
 :customcss: css/presentation.css
@@ -319,7 +319,159 @@ scodec
 
 == Typeclasses
 
-Monoids & Monads
+[source,scala]
+----
+trait Semigroup[A]:
+  def combine(x: A, y: A): A
+
+trait Monoid[A] extends Semigroup[A]:
+  def empty: A
+----
+
+=== Typeclasses
+
+[source,scala]
+----
+given Monoid[Int]:
+  def combine(x: Int, y: Int) = x + y
+  def empty = 0
+
+given Monoid[String]:
+  def combine(x: String, y: String) = x ++ y
+  def empty = ""
+----
+
+[%step]
+[source,scala]
+----
+given [A] => Monoid[List[A]]:
+  def combine(x: List[A], y: List[A]) = x ++ y
+  def empty = Nil
+----
+
+=== Typeclasses
+
+[source,scala]
+----
+> summon[Semigroup[Int]].combine(1, 2)
+val res0: Int = 3
+
+> summon[Semigroup[String]].combine("Hello", "World")
+val res1: String = "HelloWorld"
+
+> summon[Semigroup[List[Int]]].combine(List(1, 2, 3), List(4, 5, 6))
+val res2: List[Int] = List(1, 2, 3, 4, 5, 6)
+----
+
+=== Typeclasses
+
+[source,scala,highlight=3]
+----
+trait Semigroup[A]:
+  def combine(x: A, y: A): A
+  extension (x: A) def |+|(y: A): A = combine(x, y)
+
+trait Monoid[A] extends Semigroup[A]:
+  def empty: A
+----
+
+[source,scala]
+----
+> 1 |+| 2
+val res0: Int = 3
+
+> "Hello" |+| "World"
+val res1: String = "HelloWorld"
+
+> List(1, 2, 3) |+| List(4, 5, 6)
+val res2: List[Int] = List(1, 2, 3, 4, 5, 6)
+----
+
+[transition=slide-out none]
+=== Typeclasses
+
+[source,scala]
+----
+given [A: Semigroup] => Monoid[Option[A]]:
+  def combine(x: Option[A], y: Option[A]) =
+    (x, y) match
+      case (None,     None) => None
+      case (Some(xx), None) => Some(xx)
+      case (None,     Some(yy)) => Some(yy)
+      case (Some(xx), Some(yy)) => Some(xx |+| yy)
+
+  def empty = None
+----
+
+[transition=slide-in none]
+=== Typeclasses
+
+[source,scala,highlight=7]
+----
+given [A: Semigroup] => Monoid[Option[A]]:
+  def combine(x: Option[A], y: Option[A]) =
+    (x, y) match
+      case (None,     None) => None
+      case (Some(xx), None) => Some(xx)
+      case (None,     Some(yy)) => Some(yy)
+      case (Some(xx), Some(yy)) => Some(xx |+| yy)
+
+  def empty = None
+----
+
+=== Typeclasses
+[source,scala]
+----
+> Some(1) |+| Some(2)
+val res0: Option[Int] = Some(3)
+
+> Some(1) |+| None
+val res1: Option[Int] = None
+----
+
+=== Typeclasses
+[source,scala]
+----
+given [K, V: Semigroup] => Monoid[Map[K, V]]:
+  def combine(x: Map[K, V], y: Map[K, V]) =
+    y.foldLeft(x):
+      case (acc, (k, v)) =>
+        acc.updatedWith(k)(_ |+| Some(v))
+
+  def empty = Map.empty
+----
+
+[%step]
+[source,scala]
+----
+val a = Map("hello" -> 1, "world" -> 1)
+val b = Map("world" -> 2, "scala" -> 1)
+val c = a |+| b
+// c = Map(("hello", 1), ("world", 3), ("scala", 1))
+----
+
+=== Typeclasses
+[source,scala]
+----
+extension [A](as: IterableOnce[A])
+  def combineAll(using m: Monoid[A]): A =
+    as.iterator.foldLeft(m.empty)(m.combine)
+
+  def foldMap[B](f: A => B)(using m: Monoid[B]): B =
+    as.iterator.foldLeft(m.empty)((acc, a) => acc |+| f(a))
+----
+
+=== Typeclasses
+[source,scala]
+----
+def bag[A](as: IterableOnce[A]): Map[A, Int] =
+  as.foldMap(a => Map(a -> 1))
+
+scala> val charOccurs = bag("scala".toList)
+val charOccurs: Map[Char, Int] = Map(s -> 1, c -> 1, a -> 2, l -> 1)
+----
+
+
 
 == Part 3: Retrospective
 

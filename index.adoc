@@ -10,6 +10,9 @@
 :revealjs_width: 1200
 :docinfo: private
 
+image::images/synth.jpg[Modular Synthesizer,height=500]
+
+
 == Part 1: Complexity
 
 [%notitle]
@@ -44,11 +47,7 @@
 
 [%notitle]
 === Composition
-image::images/synth.jpg[Modular Synthesizer]
-
-[%notitle]
-=== Composition
-image::images/breadboard.jpg[8-bit Breadboard Computer]
+image::images/breadboard.jpg[8-bit Breadboard Computer,height=750]
 
 === Agenda
 
@@ -69,7 +68,11 @@ def mean(xs: List[Double]): Double =
   if xs.isEmpty then
     throw new ArithmeticException("mean of empty list!")
   else xs.sum / xs.length
+----
 
+[%step]
+[source,scala]
+----
 def variance(xs: List[Double]): Double =
   val m = mean(xs)
   mean(xs.map(x => math.pow(x - m, 2)))
@@ -81,7 +84,7 @@ def variance(xs: List[Double]): Double =
 > mean(List(1.0, 2.0, 3.0, 4.0, 5.0))
 val res0: Double = 3.0
 
-> mean(List(1.0, 2.0, 3.0, 4.0, 5.0))
+> variance(List(1.0, 2.0, 3.0, 4.0, 5.0))
 val res1: Double = 2.0
 ----
 
